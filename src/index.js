@@ -27,7 +27,7 @@ function checksExistsUserAccount(request, response, next) {
 }
 
 app.post("/users", (request, response) => {
-  const { id, name, username, todos } = request.body;
+  const { name, username } = request.body;
 
   const customerAlreadyExists = users.find((user) => {
     return user.username === username;
@@ -37,20 +37,24 @@ app.post("/users", (request, response) => {
     return response.status(400).send({ error: "User already exists!" });
   }
 
-  users.push({
+  const newUser = {
     id: uuidv4(),
     name: name,
     username: username,
     todos: [],
-  });
+  };
 
-  response.status(200).json(users);
+  users.push(newUser);
+
+  response.status(201).json(newUser);
 });
 
 app.get("/todos", checksExistsUserAccount, (request, response) => {
   const { user } = request;
 
-  return response.status(200).json(user.todos);
+  const todos = user.todos;
+
+  return response.status(200).json(todos);
 });
 
 app.post("/todos", checksExistsUserAccount, (request, response) => {
@@ -66,7 +70,8 @@ app.post("/todos", checksExistsUserAccount, (request, response) => {
   };
 
   user.todos.push(newTodo);
-  return response.status(200).json(users);
+
+  return response.status(201).json(newTodo);
 });
 
 app.put("/todos/:id", checksExistsUserAccount, (request, response) => {
@@ -80,9 +85,9 @@ app.put("/todos/:id", checksExistsUserAccount, (request, response) => {
   if (findTaskToUpdate) {
     findTaskToUpdate.title = title;
     findTaskToUpdate.deadline = deadline;
-    response.status(200).json(user);
+    response.status(200).json(findTaskToUpdate);
   } else {
-    response.status(400).json({ error: "Task not found." });
+    response.status(404).json({ error: "Task not found." });
   }
 });
 
@@ -94,10 +99,10 @@ app.patch("/todos/:id/done", checksExistsUserAccount, (request, response) => {
   const findTaskToUpdate = user.todos.find((task) => task.id === taskId);
 
   if (findTaskToUpdate) {
-    findTaskToUpdate.done = true
-    response.status(200).json(user);
+    findTaskToUpdate.done = true;
+    response.status(200).json(findTaskToUpdate);
   } else {
-    response.status(400).json({ error: "Task not found." });
+    response.status(404).json({ error: "Task not found." });
   }
 });
 
@@ -107,10 +112,12 @@ app.delete("/todos/:id", checksExistsUserAccount, (request, response) => {
   const taskId = request.params.id;
 
   const findTaskToUpdate = user.todos.find((task) => task.id === taskId);
-  
-  if(findTaskToUpdate) {
-    user.todos = user.todos.filter((todo) => todo.id != taskId)
-    response.status(200).json(user.todos)
+
+  if (!findTaskToUpdate) {
+    response.status(404).json({ error: "Task not found." });
+  } else {
+    user.todos = user.todos.filter((todo) => todo.id != taskId);
+    response.status(204).json(findTaskToUpdate);
   }
 });
 
